@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DraftMaster</title>
+<style>
+:root{--bg:#090d17;--panel:#121829;--panel2:#1a2238;--line:#28324f;--txt:#e8ecf6;--mut:#8b96b3;--acc:#19d3c5;--gold:#f2b84b;--blue:#4aa3ff;--red:#ff5a6a}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#16213d,var(--bg));color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+#app{max-width:1280px;margin:0 auto;padding:16px}
+h1,h2,h3{margin:0 0 10px;letter-spacing:.02em}
+.logo{font-size:44px;font-weight:900;letter-spacing:.04em;background:linear-gradient(90deg,var(--acc),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.mut{color:var(--mut)}.small{font-size:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.center{max-width:420px;margin:8vh auto;text-align:center}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0c1220;color:var(--txt);font-size:16px;margin:6px 0}
+button{cursor:pointer;border:0;border-radius:10px;padding:12px 16px;font-size:15px;font-weight:700;color:#06121a;background:var(--acc);transition:transform .08s,filter .15s}
+button:hover{filter:brightness(1.1)}button:active{transform:scale(.97)}
+button.sec{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+button.gold{background:var(--gold)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.sp{justify-content:space-between}
+.menu{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+.menu button{padding:22px;font-size:17px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.tile{position:relative;background:var(--panel2);border:2px solid var(--line);border-radius:10px;padding:5px;text-align:center;cursor:pointer;user-select:none}
+.tile img{width:100%;aspect-ratio:1;border-radius:7px;display:block;background:#0c1220;object-fit:cover}
+.tile .n{font-size:11px;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .s{font-size:10px;color:var(--mut)}
+.tile .m{position:absolute;top:2px;right:2px;background:var(--gold);color:#221700;font-size:10px;font-weight:900;border-radius:6px;padding:1px 5px}
+.tile .r{position:absolute;top:2px;left:2px;background:#000a;font-size:9px;font-weight:800;border-radius:6px;padding:1px 4px}
+.tile.off{opacity:.25;cursor:default;filter:grayscale(1)}
+.tile.sel{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
+.tile.dis{opacity:.3;pointer-events:none;filter:grayscale(1)}
+.modal{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal>.panel{max-width:760px;width:100%;max-height:92vh;overflow:auto}
+.cards{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.card{width:170px;border-radius:12px;overflow:hidden;border:2px solid var(--gold);background:#0c1220;animation:pop .5s both}
+.card:nth-child(2){animation-delay:.25s}.card:nth-child(3){animation-delay:.5s}
+.card img{width:100%;height:230px;object-fit:cover;display:block;background:#0c1220}
+.card div{padding:8px;text-align:center;font-weight:800}
+@keyframes pop{from{transform:scale(.3) rotateY(90deg);opacity:0}to{transform:none;opacity:1}}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:800;background:var(--panel2);border:1px solid var(--line)}
+.tag.new{background:var(--acc);color:#06121a;border:0}
+.draftbar{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:12px}
+.side{padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--panel)}
+.side.blue{border-color:var(--blue)}.side.red{border-color:var(--red)}
+.slots{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.slot{width:52px;height:52px;border-radius:8px;border:2px dashed var(--line);background:#0c1220;overflow:hidden;position:relative}
+.slot.ban{width:34px;height:34px}.slot.ban img{filter:grayscale(1) brightness(.6)}
+.slot img{width:100%;height:100%;object-fit:cover;display:block}
+.slot.cur{border-color:var(--gold);border-style:solid;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.5}}
+.timer{font-size:34px;font-weight:900;text-align:center;min-width:80px}
+.game{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);gap:12px}
+@media(max-width:900px){.game{grid-template-columns:1fr}.draftbar{grid-template-columns:1fr}}
+canvas{width:100%;aspect-ratio:1;border-radius:14px;border:1px solid var(--line);display:block;background:#0d1a16}
+.mapwrap{position:relative}
+.hud{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:800}
+.hud .clock{font-size:26px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:5px 6px;text-align:left;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-size:11px;font-weight:700}
+td img{width:26px;height:26px;border-radius:50%;vertical-align:middle;margin-right:6px;object-fit:cover}
+tr.dead{opacity:.4}
+.cv{font-weight:900;font-variant-numeric:tabular-nums}
+.tb{color:var(--blue)}.tr{color:var(--red)}
+.feed{font-size:12px;height:118px;overflow:hidden;display:flex;flex-direction:column-reverse;margin-top:8px}
+.feed div{padding:2px 0}
+.choice{position:absolute;left:0;right:0;bottom:0;padding:12px;background:linear-gradient(transparent,#000e 30%);border-radius:0 0 14px 14px}
+.choice .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.choice button{padding:12px 6px}.choice button small{display:block;font-weight:500;font-size:11px;opacity:.8}
+.choice button.pick{outline:3px solid var(--gold)}
+.banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);background:#000d;border:2px solid var(--gold);padding:14px 22px;border-radius:14px;text-align:center;font-weight:800;animation:pop .3s both;white-space:nowrap}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000e;border:1px solid var(--line);padding:10px 18px;border-radius:10px;z-index:99}
+.skins{display:flex;gap:8px;flex-wrap:wrap}
+.skin{width:86px;font-size:10px;text-align:center;cursor:pointer;border:2px solid var(--line);border-radius:8px;padding:3px}
+.skin img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px;display:block}
+.skin.lock{opacity:.3;cursor:not-allowed}.skin.on{border-color:var(--gold)}
+footer{margin-top:22px;font-size:10px;color:var(--mut);text-align:center}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<footer>DraftMaster est un projet de fan. Il n'est ni approuvé ni sponsorisé par Riot Games. League of Legends et ses images sont des marques et contenus de Riot Games, Inc. (chargés depuis Data Dragon).</footer>
+<script>
+"use strict";
+/* ============================================================
+   1. CONFIGURATION — colle ici la config de TON projet Firebase
+   (Console Firebase > Paramètres du projet > Tes applications > Web)
+   Tant que apiKey est vide, le jeu tourne en MODE LOCAL (bot).
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyClarWBPibxbOhxVaLfh79mK_lot-Kg-Ew",
+  authDomain: "draftmaster-4fd8e.firebaseapp.com",
+  databaseURL: "https://draftmaster-4fd8e-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "draftmaster-4fd8e",
+  storageBucket: "draftmaster-4fd8e.firebasestorage.app",
+  messagingSenderId: "103251581158",
+  appId: "1:103251581158:web:00b431afe349f2acee0327"
+};
+const FIREBASE_SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
+const DD = "https://ddragon.leagueoflegends.com";
+
+/* ---------- Équilibrage (modifiable) ---------- */
+const START_CHESTS = 10;       // coffres au départ
+const CHEST_SIZE = 3;          // champions par coffre
+const MASTERY_PCT = 3;         // +3 % de carry par niveau de maîtrise (max M10 = +27 %)
+const MASTERY_CAP = 10;
+const OFFROLE_MULT = 0.9;      // -10 % si le champion n'est pas à son rôle
+const DRAFT_TURN_S = 25;       // secondes par action de draft
+const CHOICE_S = 10;           // secondes pour choisir une stratégie
+
+/* ============================================================
+   2. DONNÉES CHAMPIONS
+   Rôle : T top, J jungle, M mid, A adc, S support
+   Profil de winrate selon la durée de partie :
+   E très fort tôt, e fort tôt, m stable, l fort tard, L hyper-scaling
+   ============================================================ */
+const TABLE = "Aatrox:T:e,Ahri:M:m,Akali:M:m,Akshan:M:e,Alistar:S:e,Ambessa:T:m,Amumu:J:m,Anivia:M:l,Annie:M:e,Aphelios:A:l,Ashe:A:m,AurelionSol:M:L,Aurora:M:m,Azir:M:L,Bard:S:l,Belveth:J:l,Blitzcrank:S:e,Brand:S:m,Braum:S:m,Briar:J:e,Caitlyn:A:m,Camille:T:l,Cassiopeia:M:l,Chogath:T:l,Corki:M:l,Darius:T:E,Diana:J:m,Draven:A:E,DrMundo:T:l,Ekko:J:m,Elise:J:E,Evelynn:J:m,Ezreal:A:m,Fiddlesticks:J:m,Fiora:T:l,Fizz:M:m,Galio:M:e,Gangplank:T:L,Garen:T:e,Gnar:T:m,Gragas:J:e,Graves:J:m,Gwen:T:l,Hecarim:J:m,Heimerdinger:M:e,Hwei:M:l,Illaoi:T:m,Irelia:T:e,Ivern:J:m,Janna:S:l,JarvanIV:J:E,Jax:T:L,Jayce:T:E,Jhin:A:m,Jinx:A:L,Kaisa:A:l,Kalista:A:E,Karma:S:E,Karthus:J:L,Kassadin:M:L,Katarina:M:m,Kayle:T:L,Kayn:J:l,Kennen:T:m,Khazix:J:e,Kindred:J:l,Kled:T:E,KogMaw:A:L,KSante:T:m,Leblanc:M:E,LeeSin:J:E,Leona:S:e,Lillia:J:m,Lissandra:M:e,Lucian:A:E,Lulu:S:m,Lux:S:m,Malphite:T:m,Malzahar:M:m,Maokai:S:m,MasterYi:J:L,Mel:M:m,Milio:S:l,MissFortune:A:e,MonkeyKing:J:m,Mordekaiser:T:m,Morgana:S:m,Naafiri:M:e,Nami:S:m,Nasus:T:L,Nautilus:S:e,Neeko:M:m,Nidalee:J:E,Nilah:A:l,Nocturne:J:m,Nunu:J:e,Olaf:T:E,Orianna:M:l,Ornn:T:L,Pantheon:T:E,Poppy:S:m,Pyke:S:E,Qiyana:M:e,Quinn:T:E,Rakan:S:m,Rammus:J:m,RekSai:J:E,Rell:S:m,Renata:S:l,Renekton:T:E,Rengar:J:e,Riven:T:m,Rumble:T:e,Ryze:M:L,Samira:A:m,Sejuani:J:m,Senna:S:L,Seraphine:S:l,Sett:T:e,Shaco:J:e,Shen:T:m,Shyvana:J:l,Singed:T:m,Sion:T:l,Sivir:A:L,Skarner:J:m,Smolder:A:L,Sona:S:L,Soraka:S:l,Swain:S:m,Sylas:M:m,Syndra:M:l,TahmKench:T:m,Taliyah:J:m,Talon:M:E,Taric:S:l,Teemo:T:m,Thresh:S:m,Tristana:A:l,Trundle:T:e,Tryndamere:T:l,Twitch:A:L,TwistedFate:M:m,Udyr:J:e,Urgot:T:m,Varus:A:m,Vayne:A:L,Veigar:M:L,Velkoz:S:l,Vex:M:m,Vi:J:e,Viego:J:m,Viktor:M:L,Vladimir:M:L,Volibear:J:e,Warwick:J:e,Xayah:A:l,Xerath:S:l,XinZhao:J:E,Yasuo:M:l,Yone:M:l,Yorick:T:l,Yunara:A:l,Yuumi:S:l,Zaahen:T:m,Zac:J:m,Zed:M:m,Zeri:A:l,Ziggs:M:m,Zilean:S:l,Zoe:M:m,Zyra:S:m";
+// winrate (%) pour des parties de <15, 15-25, 25-35, 35-45, 45+ minutes
+const PROFILES = {E:[53,52,50,48,46.5],e:[52,51,50,49,48],m:[50,50,50,50,50],l:[48,49,50,51.5,52.5],L:[46,48,50,53,55]};
+const ROLE_OF = {T:"top",J:"jng",M:"mid",A:"adc",S:"sup"};
+const ROLE_LBL = {top:"TOP",jng:"JGL",mid:"MID",adc:"ADC",sup:"SUP"};
+const ROLES = ["top","jng","mid","adc","sup"];
+const TAG_ROLE = {Marksman:"adc",Support:"sup",Mage:"mid",Assassin:"mid",Fighter:"top",Tank:"top"};
+const BASE_TABLE = {};
+TABLE.split(",").forEach(e=>{const [id,r,p]=e.split(":");BASE_TABLE[id]={role:ROLE_OF[r],profile:p};});
+
+const DATA = {patch:null,champs:{},list:[],source:"profils estimés",online:false};
+function hashOff(id){let h=0;for(const ch of id)h=(h*31+ch.charCodeAt(0))>>>0;return (h%25)/10-1.2;}
+function addChamp(id,name,tags){
+  const b=BASE_TABLE[id]||{role:TAG_ROLE[(tags||[])[0]]||"mid",profile:"m"};
+  const o=hashOff(id);
+  DATA.champs[id]={id,name:name||id,role:b.role,profile:b.profile,curve:PROFILES[b.profile].map(v=>+(v+o).toFixed(2))};
+}
+async function loadData(){
+  try{
+    const v=await (await fetch(DD+"/api/versions.json")).json();
+    const j=await (await fetch(`${DD}/cdn/${v[0]}/data/fr_FR/champion.json`)).json();
+    DATA.patch=v[0];DATA.online=true;
+    for(const id in j.data)addChamp(id,j.data[id].name,j.data[id].tags);
+    try{localStorage.setItem("dm_dd",JSON.stringify({v:v[0],c:Object.values(j.data).map(d=>[d.id,d.name,d.tags])}));}catch(e){}
+  }catch(e){
+    let c=null;try{c=JSON.parse(localStorage.getItem("dm_dd"));}catch(_){}
+    if(c){DATA.patch=c.v;DATA.online=true;c.c.forEach(x=>addChamp(x[0],x[1],x[2]));}
+    else Object.keys(BASE_TABLE).forEach(id=>addChamp(id,id,[]));
+  }
+  // Fichier optionnel stats.json (même dossier) pour remplacer les profils par de vraies stats
+  // {"patch":"16.22","source":"u.gg","champions":{"Aatrox":{"role":"top","wr":[51.2,50.6,50,49.4,48.9]}}}
+  try{
+    const r=await fetch("stats.json",{cache:"no-store"});
+    if(r.ok){const s=await r.json();
+      for(const id in s.champions||{}){const c=DATA.champs[id],o=s.champions[id];if(!c)continue;
+        if(Array.isArray(o.wr)&&o.wr.length===5)c.curve=o.wr.map(Number);
+        if(ROLES.includes(o.role))c.role=o.role;}
+      DATA.source=(s.source||"stats.json")+(s.patch?" "+s.patch:"");}
+  }catch(e){}
+  DATA.list=Object.values(DATA.champs).sort((a,b)=>a.name.localeCompare(b.name,"fr"));
+}
+function patchLabel(){return DATA.patch?"Patch "+DATA.patch.split(".").slice(0,2).join("."):"Patch inconnu (hors ligne)";}
+function icon(id,skin){
+  if(!DATA.online)return "";
+  return skin?`${DD}/cdn/img/champion/tiles/${id}_${skin}.jpg`:`${DD}/cdn/${DATA.patch}/img/champion/${id}.png`;
+}
+function art(id,skin){return DATA.online?`${DD}/cdn/img/champion/loading/${id}_${skin||0}.jpg`:"";}
+function masteryMult(count){return 1+MASTERY_PCT/100*(Math.min(count||1,MASTERY_CAP)-1);}
+
+//==SIM-START== (moteur pur, sans DOM : identique chez les deux joueurs)
+const TIMINGS=[0,5,10,15,20,30,45,60];
+const TPM=40;                 // 10 ticks/s -> 1 minute de jeu = 4 s réelles (5 min = 20 s)
+const CURVE_T=[0,15,25,35,45];
+const BEATS={farm:"dive",dive:"invade",invade:"farm",push:"fight",fight:"split",split:"push"};
+const LANES={top:[[110,890],[110,110],[890,110]],mid:[[110,890],[890,110]],bot:[[110,890],[890,890],[890,110]]};
+const LN=["top","mid","bot"];
+const BASES={blue:[110,890],red:[890,110]};
+const CAMPS={blue:[[300,560],[520,770]],red:[[480,230],[700,440]]};
+const PITS={dragon:[665,675],baron:[335,325]};
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function wrAt(curve,min){
+  if(min<=0)return curve[0];
+  for(let i=1;i<CURVE_T.length;i++)if(min<=CURVE_T[i]){const a=CURVE_T[i-1],b=CURVE_T[i];return curve[i-1]+(curve[i]-curve[i-1])*(min-a)/(b-a);}
+  return curve[4];
+}
+function lanePos(lane,t){
+  const p=LANES[lane];let tot=0;const seg=[];
+  for(let i=1;i<p.length;i++){const d=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);seg.push(d);tot+=d;}
+  let d=Math.max(0,Math.min(1,t))*tot;
+  for(let i=0;i<seg.length;i++){if(d<=seg[i]||i===seg.length-1){const k=seg[i]?d/seg[i]:0;return[p[i][0]+(p[i+1][0]-p[i][0])*k,p[i][1]+(p[i+1][1]-p[i][1])*k];}d-=seg[i];}
+}
+function createSim(seed,teams){
+  const rnd=mulberry32(seed>>>0);
+  const S={tick:0,over:null,champs:[],towers:[],nexus:{blue:100,red:100},front:{top:.5,mid:.5,bot:.5},resolved:[],events:[],drakes:{blue:0,red:0},barons:{blue:0,red:0},down:{blue:0,red:0},freeze:0,fight:null,last:null};
+  const opp=t=>t==="blue"?"red":"blue";
+  for(const team of["blue","red"])teams[team].forEach(c=>{const b=BASES[team];
+    S.champs.push({id:c.id,name:c.name,role:c.role,curve:c.curve,mult:c.mult,skin:c.skin||0,off:!!c.off,team,bonus:0,k:0,d:0,dead:0,x:b[0],y:b[1],jt:null,arrived:false,jx:rnd()*2-1,jy:rnd()*2-1});});
+  for(const team of["blue","red"])for(const lane of LN)for(let tier=0;tier<3;tier++){
+    const t=team==="blue"?[.38,.26,.15][tier]:[.62,.74,.85][tier],p=lanePos(lane,t);
+    S.towers.push({team,lane,tier,t,hp:100,alive:true,x:p[0],y:p[1]});}
+  const minute=()=>S.tick/TPM;
+  const carry=c=>wrAt(c.curve,minute())*c.mult*(1+c.bonus/100);
+  const team=t=>S.champs.filter(c=>c.team===t);
+  const teamCarry=t=>team(t).reduce((s,c)=>s+carry(c),0);
+  const laneOf=c=>c.role==="top"?"top":c.role==="mid"?"mid":c.role==="jng"?c.jt:"bot";
+  const nextTower=(t,lane)=>S.towers.find(w=>w.team===t&&w.lane===lane&&w.alive);
+  const towerPos=t=>{const w=nextTower(t,"mid");return w?[w.x,w.y]:BASES[t].slice();};
+  const log=(type,t,text)=>S.events.push({tick:S.tick,type,team:t,text});
+  const deadTicks=()=>Math.round((0.6+minute()*0.03)*TPM);
+  function kill(v,k){v.dead=S.tick+deadTicks();v.d++;v.arrived=false;if(k){k.k++;k.bonus+=1;}
+    log("kill",k?k.team:opp(v.team),(k?k.name:"Une tour")+" élimine "+v.name);}
+  function killSome(loser,n,winner){
+    for(let i=0;i<n;i++){const al=team(loser).filter(c=>!c.dead);if(!al.length)return;
+      const v=al[Math.floor(rnd()*al.length)],ks=team(winner).filter(c=>!c.dead);
+      kill(v,ks.length?ks[Math.floor(rnd()*ks.length)]:null);}
+  }
+  function destroy(tw,by,credited,bonus){tw.alive=false;tw.hp=0;S.down[by]++;credited.forEach(c=>c.bonus+=bonus);
+    log("tower",by,"Tour "+tw.lane.toUpperCase()+" détruite"+(credited.length&&credited.length<5?" par "+credited.map(c=>c.name).join(", "):"")+" (+"+bonus+" % carry)");}
+  function hitNexus(t,dmg){S.nexus[t]-=dmg;if(S.nexus[t]<=0&&!S.over){S.nexus[t]=0;S.over=opp(t);log("end",S.over,"Le Nexus "+(t==="blue"?"bleu":"rouge")+" est détruit !");}}
+  function power(t,lane){let s=0;for(const c of S.champs)if(c.team===t&&!c.dead&&c.arrived&&laneOf(c)===lane)s+=carry(c);return s;}
+  function target(c){
+    if(S.fight&&S.tick<S.fight.until&&S.fight.pos)return[S.fight.pos[0]+c.jx*40+(c.team==="blue"?-22:22),S.fight.pos[1]+c.jy*40+(c.team==="blue"?22:-22)];
+    const lane=laneOf(c);
+    if(!lane){const p=CAMPS[c.team][c.jc||0];return[p[0]+c.jx*20,p[1]+c.jy*20];}
+    const p=lanePos(lane,S.front[lane]+(c.team==="blue"?-0.028:0.028));
+    return[p[0]+c.jx*22,p[1]+c.jy*22];
+  }
+  function move(){
+    for(const c of S.champs){
+      if(c.dead){if(S.tick>=c.dead){c.dead=0;c.x=BASES[c.team][0];c.y=BASES[c.team][1];}else continue;}
+      const t=target(c),dx=t[0]-c.x,dy=t[1]-c.y,d=Math.hypot(dx,dy),sp=15;
+      if(d<=sp){c.x=t[0];c.y=t[1];}else{c.x+=dx/d*sp;c.y+=dy/d*sp;}
+      c.arrived=d<70;
+    }
+  }
+  S.minute=minute;S.carry=carry;S.teamCarry=teamCarry;
+  S.pending=()=>{for(let i=0;i<TIMINGS.length;i++)if(!S.resolved[i]&&S.tick>=TIMINGS[i]*TPM)return i;return null;};
+  S.step=()=>{
+    if(S.over)return;
+    S.tick++;const min=minute();
+    if(S.tick%80===1)for(const c of S.champs)if(c.role==="jng"){const r=rnd();c.jt=r<.4?null:LN[Math.floor(rnd()*3)];c.jc=rnd()<.5?0:1;}
+    move();
+    if(S.freeze>0){S.freeze--;return;}
+    const accel=min<45?1:min<60?2:2+(min-60)*0.6;
+    let lead=0;
+    if(min>=60){lead=Math.sign(S.down.blue-S.down.red)||Math.sign(teamCarry("blue")-teamCarry("red"))||1;}
+    for(const lane of LN){
+      const pb=power("blue",lane),pr=power("red",lane);
+      let adv=pb+pr>0?(pb-pr)/(pb+pr):0;adv+=lead*0.5;
+      const tr=nextTower("red",lane),tb=nextTower("blue",lane);
+      const hi=tr?tr.t-0.02:0.95,lo=tb?tb.t+0.02:0.05;
+      let f=S.front[lane]+(adv*0.0035+(rnd()-.5)*0.004+((lo+hi)/2-S.front[lane])*0.003)*accel;
+      const base=0.8*(1+min/15)*accel;
+      if(f>=hi){f=hi;if(pb>0||lead>0){const dmg=base*Math.max(pb,lead>0?60:0)/50*(pr>0&&lead<=0?0.4:1);
+        if(tr){tr.hp-=dmg;if(tr.hp<=0)destroy(tr,"blue",S.champs.filter(c=>c.team==="blue"&&!c.dead&&c.arrived&&laneOf(c)===lane),3);}
+        else hitNexus("red",dmg*1.5);}}
+      if(f<=lo){f=lo;if(pr>0||lead<0){const dmg=base*Math.max(pr,lead<0?60:0)/50*(pb>0&&lead>=0?0.4:1);
+        if(tb){tb.hp-=dmg;if(tb.hp<=0)destroy(tb,"red",S.champs.filter(c=>c.team==="red"&&!c.dead&&c.arrived&&laneOf(c)===lane),3);}
+        else hitNexus("blue",dmg*1.5);}}
+      S.front[lane]=f;
+      if(pb>0&&pr>0&&rnd()<0.007*accel){
+        const w=rnd()<pb**4/(pb**4+pr**4)?"blue":"red",l=opp(w);
+        const vs=S.champs.filter(c=>c.team===l&&!c.dead&&c.arrived&&laneOf(c)===lane),ks=S.champs.filter(c=>c.team===w&&!c.dead&&c.arrived&&laneOf(c)===lane);
+        if(vs.length&&ks.length)kill(vs[Math.floor(rnd()*vs.length)],ks[Math.floor(rnd()*ks.length)]);
+      }
+      if(S.over)return;
+    }
+  };
+  // Résout le fight du timing i avec les stratégies des deux joueurs
+  S.resolve=(i,cb,cr)=>{
+    S.resolved[i]=true;
+    const min=TIMINGS[i],early=i<3,m=i>=6?2:1;
+    let w=BEATS[cb]===cr?"blue":BEATS[cr]===cb?"red":null,tie=!w;
+    const res={i,blue:cb,red:cr,winner:null,tie,text:""};S.last=res;
+    if(tie&&cb==="farm"){S.champs.forEach(c=>c.bonus+=1);res.text="Les deux équipes farment tranquillement (+1 % chacun)";log("fight",null,res.text);return res;}
+    if(tie){const sb=teamCarry("blue"),sr=teamCarry("red");w=rnd()<sb**6/(sb**6+sr**6)?"blue":"red";}
+    const l=opp(w),strat=w==="blue"?cb:cr,W=team(w);res.winner=w;
+    let pos=null;
+    if(early){
+      const b=tie?2:4;W.forEach(c=>c.bonus+=b);
+      if(strat==="dive"){killSome(l,2,w);pos=towerPos(l);res.text="Dive réussi";}
+      else if(strat==="invade"){killSome(l,1,w);pos=CAMPS[l][0];res.text="Invade réussi";}
+      else{killSome(l,1,w);pos=towerPos(w);res.text="Dive puni sous la tour";}
+      res.text+=" : +"+b+" % de carry pour l'équipe";
+    }else if(strat==="push"){
+      let n=0;
+      for(let k=0;k<m&&!S.over;k++){
+        let tw=nextTower(l,"mid")||nextTower(l,"top")||nextTower(l,"bot");
+        const open=LN.some(x=>!nextTower(l,x));
+        if(open&&!nextTower(l,"mid"))tw=null;
+        if(tw){destroy(tw,w,W.filter(c=>!c.dead),2);n++;}else hitNexus(l,50);
+      }
+      S.front.mid=w==="blue"?Math.max(S.front.mid,.6):Math.min(S.front.mid,.4);
+      pos=lanePos("mid",S.front.mid);res.text="Push groupé : "+(n?n+" tour(s) détruite(s)":"le Nexus est attaqué");
+    }else if(strat==="split"){
+      let n=0;
+      for(let k=0;k<m&&!S.over;k++){
+        const rt=S.towers.filter(x=>x.team===l&&x.alive&&x.lane==="top").length,rb=S.towers.filter(x=>x.team===l&&x.alive&&x.lane==="bot").length;
+        const lane=(rt>=rb&&rt>0)?"top":rb>0?"bot":"top";
+        const tw=nextTower(l,lane),who=W.filter(c=>lane==="top"?c.role==="top":c.role==="adc"||c.role==="sup");
+        if(tw){destroy(tw,w,who,5);n++;}else hitNexus(l,50);
+      }
+      res.text="Split push : "+(n?n+" tour(s) détruite(s)":"le Nexus est attaqué");
+    }else{
+      killSome(l,1+m,w);killSome(w,1,l);
+      if(min<30){S.drakes[w]+=m;W.forEach(c=>c.bonus+=5*m);pos=PITS.dragon;res.text="Teamfight gagné : "+(m>1?"2 dragons":"dragon")+" (+"+5*m+" % pour l'équipe)";}
+      else{S.barons[w]+=1;W.forEach(c=>c.bonus+=8*m);pos=PITS.baron;const d=(w==="blue"?1:-1)*0.07*m;LN.forEach(x=>S.front[x]=Math.max(.05,Math.min(.95,S.front[x]+d)));res.text="Teamfight gagné : Nashor (+"+8*m+" % pour l'équipe)";}
+    }
+    S.freeze=30;S.fight={pos,until:S.tick+30};
+    log("fight",w,res.text);return res;
+  };
+  return S;
+}
+//==SIM-END==
+
+/* ============================================================
+   3. COMPTES : Firebase si configuré, sinon localStorage
+   ============================================================ */
+const FB={on:!!FIREBASE_CONFIG.apiKey,db:null,auth:null,uid:null};
+let ME=null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+function toast(t){const d=document.createElement("div");d.className="toast";d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),3000);}
+function loadScript(src){return new Promise((ok,ko)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>ko(new Error("Chargement impossible : "+src));document.head.appendChild(s);});}
+async function fbInit(){
+  if(FB.db)return;
+  for(const f of["firebase-app-compat.js","firebase-auth-compat.js","firebase-database-compat.js"])await loadScript(FIREBASE_SDK+f);
+  firebase.initializeApp(FIREBASE_CONFIG);FB.auth=firebase.auth();FB.db=firebase.database();
+}
+const newProfile=p=>({pseudo:p,chests:START_CHESTS,col:{},skins:{},wins:0,losses:0});
+const fixProfile=d=>{d.col=d.col||{};d.skins=d.skins||{};d.chests=d.chests||0;d.wins=d.wins||0;d.losses=d.losses||0;return d;};
+const slug=p=>p.trim().toLowerCase().replace(/[^a-z0-9_-]/g,"");
+function weakHash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(36);}
+async function login(pseudo,pass,create){
+  const id=slug(pseudo);
+  if(id.length<3)throw new Error("Pseudo : 3 caractères minimum (lettres, chiffres, _ ou -)");
+  if(pass.length<6)throw new Error("Mot de passe : 6 caractères minimum");
+  if(FB.on){
+    await fbInit();const mail=id+"@draftmaster.game";
+    try{
+      const cred=create?await FB.auth.createUserWithEmailAndPassword(mail,pass):await FB.auth.signInWithEmailAndPassword(mail,pass);
+      FB.uid=cred.user.uid;
+    }catch(e){
+      const c=e.code||"";
+      if(c.includes("email-already-in-use"))throw new Error("Ce pseudo est déjà pris");
+      if(c.includes("user-not-found")||c.includes("wrong-password")||c.includes("invalid-credential"))throw new Error("Pseudo ou mot de passe incorrect");
+      throw e;
+    }
+    const snap=await FB.db.ref("users/"+FB.uid).get();
+    ME=fixProfile(snap.val()||newProfile(pseudo.trim()));
+    if(!snap.exists())await save();
+  }else{
+    const all=JSON.parse(localStorage.getItem("dm_users")||"{}");
+    if(create){if(all[id])throw new Error("Ce pseudo est déjà pris");all[id]={pass:weakHash(pass),data:newProfile(pseudo.trim())};localStorage.setItem("dm_users",JSON.stringify(all));}
+    if(!all[id]||all[id].pass!==weakHash(pass))throw new Error("Pseudo ou mot de passe incorrect");
+    ME=fixProfile(all[id].data);ME._id=id;
+  }
+}
+async function save(){
+  if(!ME)return;
+  const d={pseudo:ME.pseudo,chests:ME.chests,col:ME.col,skins:ME.skins,wins:ME.wins,losses:ME.losses};
+  if(FB.on)await FB.db.ref("users/"+FB.uid).set(d);
+  else{const all=JSON.parse(localStorage.getItem("dm_users")||"{}");if(all[ME._id]){all[ME._id].data=d;localStorage.setItem("dm_users",JSON.stringify(all));}}
+}
+
+/* ============================================================
+   4. ÉCRANS : connexion, menu, collection, coffres
+   ============================================================ */
+function tileHTML(id,o={}){
+  const c=DATA.champs[id];if(!c)return"";
+  const mult=masteryMult(o.count||1),v=m=>(wrAt(c.curve,m)*mult).toFixed(0);
+  return `<div class="tile ${o.cls||""}" data-id="${id}">
+    <span class="r">${ROLE_LBL[c.role]}</span>${o.count?`<span class="m">M${o.count}</span>`:""}
+    <img loading="lazy" src="${icon(id,o.skin)}" alt="" onerror="this.style.visibility='hidden'">
+    <div class="n">${esc(c.name)}</div><div class="s" title="Carry à 0 / 20 / 45 min">${v(0)} · ${v(20)} · ${v(45)}</div></div>`;
+}
+function showLogin(msg){
+  $("#app").innerHTML=`<div class="center panel">
+    <div class="logo">DraftMaster</div>
+    <p class="mut">Collectionne, drafte, regarde ton équipe carry.</p>
+    <input id="lp" placeholder="Pseudo" maxlength="16" autocomplete="username">
+    <input id="lw" type="password" placeholder="Mot de passe" autocomplete="current-password">
+    <div class="row" style="justify-content:center;margin-top:8px"><button id="bl">Se connecter</button><button id="bc" class="sec">Créer un compte</button></div>
+    <p id="lerr" style="color:var(--red);min-height:20px">${msg?esc(msg):""}</p>
+    <p class="mut small">${FB.on?"Mode en ligne (Firebase)":"Mode local : Firebase n'est pas configuré, le compte reste sur ce navigateur."}<br>${patchLabel()} · stats : ${esc(DATA.source)}</p></div>`;
+  const go=async create=>{
+    $("#lerr").textContent="";$("#bl").disabled=$("#bc").disabled=true;
+    try{await login($("#lp").value,$("#lw").value,create);showMenu();}
+    catch(e){$("#lerr").textContent=e.message||String(e);$("#bl").disabled=$("#bc").disabled=false;}
+  };
+  $("#bl").onclick=()=>go(false);$("#bc").onclick=()=>go(true);
+  $("#lw").onkeydown=e=>{if(e.key==="Enter")go(false);};
+}
+const ownedCount=()=>Object.keys(ME.col).length;
+function showMenu(){
+  cleanupMatch();
+  const n=ownedCount(),ok=n>=5;
+  $("#app").innerHTML=`<div class="row sp"><div class="logo" style="font-size:30px">DraftMaster</div>
+    <div class="mut small">${patchLabel()} · stats : ${esc(DATA.source)}</div></div>
+  <div class="panel" style="margin-top:10px"><div class="row sp">
+    <div><h2>${esc(ME.pseudo)}</h2><span class="tag">${ME.wins} V</span> <span class="tag">${ME.losses} D</span> <span class="tag">${n} / ${DATA.list.length} champions</span></div>
+    <button class="sec" id="mq">Déconnexion</button></div>
+    <div class="menu">
+      <button id="mo" ${FB.on&&ok?"":"disabled"}>Jouer en ligne${FB.on?"":"<br><small>(Firebase non configuré)</small>"}</button>
+      <button id="mb" class="sec" ${ok?"":"disabled"}>Jouer contre le bot</button>
+      <button id="mc" class="gold" ${ME.chests?"":"disabled"}>Ouvrir un coffre Hextech (${ME.chests})</button>
+      <button id="ml" class="sec">Collection</button>
+    </div>
+    ${ok?"":'<p class="mut">Ouvre tes coffres : il te faut au moins 5 champions pour jouer.</p>'}
+    <p class="mut small">1 coffre gagné par partie jouée · 3 champions par coffre · chaque doublon = +1 maîtrise (+${MASTERY_PCT} % de carry, jusqu'à M${MASTERY_CAP}) · à partir de M${MASTERY_CAP}, chaque doublon débloque un skin.</p>
+  </div>`;
+  $("#mq").onclick=()=>{if(FB.on&&FB.auth)FB.auth.signOut();ME=null;showLogin();};
+  $("#mc").onclick=openChest;$("#ml").onclick=showCollection;
+  $("#mb").onclick=()=>startLocal();$("#mo").onclick=()=>startOnline();
+}
+function openChest(){
+  if(ME.chests<=0)return;
+  ME.chests--;const got=[];
+  for(let i=0;i<CHEST_SIZE;i++){const c=DATA.list[Math.floor(Math.random()*DATA.list.length)];const isNew=!ME.col[c.id];ME.col[c.id]=(ME.col[c.id]||0)+1;got.push({c,isNew,lvl:ME.col[c.id]});}
+  save().catch(e=>toast("Sauvegarde impossible : "+e.message));
+  const m=document.createElement("div");m.className="modal";
+  m.innerHTML=`<div class="panel" style="text-align:center"><h2>Coffre Hextech</h2><div class="cards">${got.map(g=>`<div class="card"><img src="${art(g.c.id,0)}" alt="" onerror="this.style.visibility='hidden'"><div>${esc(g.c.name)}<br>${g.isNew?'<span class="tag new">NOUVEAU</span>':`<span class="tag">Maîtrise ${g.lvl}${g.lvl>=MASTERY_CAP?" · skin débloqué":""}</span>`}</div></div>`).join("")}</div>
+    <div class="row" style="justify-content:center">${ME.chests?`<button class="gold" id="ca">Encore un (${ME.chests})</button>`:""}<button class="sec" id="cx">Fermer</button></div></div>`;
+  document.body.appendChild(m);
+  m.querySelector("#cx").onclick=()=>{m.remove();if($("#mc"))showMenu();else showCollection();};
+  const a=m.querySelector("#ca");if(a)a.onclick=()=>{m.remove();openChest();};
+}
+function showCollection(){
+  const owned=DATA.list.filter(c=>ME.col[c.id]).sort((a,b)=>ME.col[b.id]-ME.col[a.id]||a.name.localeCompare(b.name,"fr"));
+  const rest=DATA.list.filter(c=>!ME.col[c.id]);
+  $("#app").innerHTML=`<div class="row sp"><h2>Collection — ${owned.length} / ${DATA.list.length}</h2><div class="row"><button class="gold" id="mc2" ${ME.chests?"":"disabled"}>Ouvrir un coffre (${ME.chests})</button><button class="sec" id="back">Retour</button></div></div>
+  <p class="mut small">Les 3 chiffres = score de carry à 0 / 20 / 45 minutes (maîtrise incluse). Clique un champion pour le détail et les skins.</p>
+  <div class="grid" id="cg">${owned.map(c=>tileHTML(c.id,{count:ME.col[c.id],skin:ME.skins[c.id]})).join("")}${rest.map(c=>tileHTML(c.id,{cls:"off"})).join("")}</div>`;
+  $("#back").onclick=showMenu;$("#mc2").onclick=openChest;
+  $("#cg").onclick=e=>{const t=e.target.closest(".tile");if(t&&!t.classList.contains("off"))showChamp(t.dataset.id);};
+}
+async function showChamp(id){
+  const c=DATA.champs[id],count=ME.col[id],unlocked=Math.max(0,count-(MASTERY_CAP-1));
+  const pts=[];for(let m=0;m<=60;m+=5)pts.push(`${20+m*4.3},${110-(wrAt(c.curve,m)-42)*6.5}`);
+  const m=document.createElement("div");m.className="modal";
+  m.innerHTML=`<div class="panel"><div class="row sp"><h2>${esc(c.name)} <span class="tag">${ROLE_LBL[c.role]}</span> <span class="tag">Maîtrise ${count}</span></h2><button class="sec" id="x">Fermer</button></div>
+   <p class="mut small">Bonus de maîtrise : +${Math.round((masteryMult(count)-1)*100)} % de carry${count<MASTERY_CAP?` · encore ${MASTERY_CAP-count} doublon(s) avant le premier skin`:""}</p>
+   <svg viewBox="0 0 300 130" style="width:100%;max-width:420px;background:#0c1220;border-radius:10px">
+     <line x1="20" y1="58" x2="280" y2="58" stroke="#28324f" stroke-dasharray="3"/><text x="2" y="61" fill="#8b96b3" font-size="8">50%</text>
+     <polyline fill="none" stroke="#19d3c5" stroke-width="2.5" points="${pts.join(" ")}"/>
+     ${[0,15,30,45,60].map(t=>`<text x="${16+t*4.3}" y="126" fill="#8b96b3" font-size="8">${t}'</text>`).join("")}</svg>
+   <h3 style="margin-top:12px">Skins</h3><div class="skins" id="sk"><span class="mut small">Chargement…</span></div></div>`;
+  document.body.appendChild(m);m.querySelector("#x").onclick=()=>{m.remove();showCollection();};
+  let skins=[{num:0,name:"Classique"}];
+  try{const j=await (await fetch(`${DD}/cdn/${DATA.patch}/data/fr_FR/champion/${id}.json`)).json();skins=j.data[id].skins.map(s=>({num:s.num,name:s.num?s.name:"Classique"}));}catch(e){}
+  const draw=()=>{m.querySelector("#sk").innerHTML=skins.map((s,i)=>{const ok=i<=unlocked;return `<div class="skin ${ok?"":"lock"} ${(ME.skins[id]||0)===s.num?"on":""}" data-n="${s.num}" data-ok="${ok?1:""}"><img loading="lazy" src="${icon(id,s.num)||""}" alt="">${esc(s.name)}${ok?"":" 🔒"}</div>`;}).join("");};
+  draw();
+  m.querySelector("#sk").onclick=e=>{const t=e.target.closest(".skin");if(!t||!t.dataset.ok)return;const n=+t.dataset.n;if(n)ME.skins[id]=n;else delete ME.skins[id];save();draw();};
+}
+
+/* ============================================================
+   5. SALLES DE JEU (locale contre le bot / en ligne via Firebase)
+   ============================================================ */
+// Ordre de draft : 3 bans, 3 picks, 2 bans, 2 picks (comme sur LoL)
+const SEQ=[["ban","blue"],["ban","red"],["ban","blue"],["ban","red"],["ban","blue"],["ban","red"],
+ ["pick","blue"],["pick","red"],["pick","red"],["pick","blue"],["pick","blue"],["pick","red"],
+ ["ban","red"],["ban","blue"],["ban","red"],["ban","blue"],
+ ["pick","red"],["pick","blue"],["pick","blue"],["pick","red"]];
+const other=s=>s==="blue"?"red":"blue";
+const toArr=v=>!v?[]:Array.isArray(v)?v:Object.keys(v).sort((a,b)=>a-b).map(k=>v[k]);
+function draftView(st){
+  const d={bans:{blue:[],red:[]},picks:{blue:[],red:[]},used:new Set()};
+  st.actions.forEach((id,n)=>{const [type,side]=SEQ[n];d[type==="ban"?"bans":"picks"][side].push(id);if(id!=="-")d.used.add(id);});
+  return d;
+}
+function validFor(st,n){
+  const [type,side]=SEQ[n],d=draftView(st);
+  const pool=Object.keys((type==="ban"?st[other(side)]:st[side]).col||{}).filter(id=>DATA.champs[id]&&!d.used.has(id));
+  if(type==="pick"&&!pool.length)return DATA.list.map(c=>c.id).filter(id=>!d.used.has(id));
+  return pool;
+}
+function assignRoles(ids){
+  let best=null,bs=-1;
+  const perm=(arr,k)=>{if(k===arr.length){let s=0;arr.forEach((r,i)=>{if(DATA.champs[ids[i]].role===r)s++;});if(s>bs){bs=s;best=arr.slice();}return;}
+    for(let i=k;i<arr.length;i++){[arr[k],arr[i]]=[arr[i],arr[k]];perm(arr,k+1);[arr[k],arr[i]]=[arr[i],arr[k]];}};
+  perm(ROLES.slice(),0);
+  return ids.map((id,i)=>({id,role:best[i],off:DATA.champs[id].role!==best[i]}));
+}
+function buildTeam(player,ids){
+  return assignRoles(ids).map(a=>{const c=DATA.champs[a.id],count=(player.col||{})[a.id]||1;
+    return{id:a.id,name:c.name,role:a.role,off:a.off,curve:c.curve,skin:(player.skins||{})[a.id]||0,mult:masteryMult(count)*(a.off?OFFROLE_MULT:1)};});
+}
+class LocalRoom{
+  constructor(){
+    this.net=false;this.side=Math.random()<.5?"blue":"red";
+    const col={};while(Object.keys(col).length<32){const c=DATA.list[Math.floor(Math.random()*DATA.list.length)];col[c.id]=(col[c.id]||0)+1+(Math.random()<.3?Math.floor(Math.random()*3):0);}
+    const me={uid:"me",pseudo:ME.pseudo,col:ME.col,skins:ME.skins},bot={uid:"bot",pseudo:"Bot Hextech",col,skins:{}};
+    this.state={seed:Math.floor(Math.random()*2**31),actions:[],choices:{},left:{}};
+    this.state[this.side]=me;this.state[other(this.side)]=bot;
+  }
+  listen(cb){this.cb=cb;setTimeout(()=>this.emit(),0);}
+  emit(){if(!this.cb)return;this.cb();this.bot();}
+  bot(){
+    const st=this.state,n=st.actions.length,bs=other(this.side);
+    if(n<SEQ.length&&SEQ[n][1]===bs&&!this.thinking){this.thinking=true;
+      this.timer=setTimeout(()=>{this.thinking=false;const v=validFor(st,n);let pickId="-";
+        if(v.length){if(SEQ[n][0]==="ban")pickId=v.sort((a,b)=>(st[this.side].col[b]||0)-(st[this.side].col[a]||0))[Math.floor(Math.random()*Math.min(3,v.length))];
+          else{const have=draftView(st).picks[bs].map(id=>DATA.champs[id].role);
+            const sc=id=>{const c=DATA.champs[id];return(c.curve[1]+c.curve[3])/2*masteryMult(st[bs].col[id]||1)*(have.includes(c.role)?0.9:1)+Math.random()*2;};
+            pickId=v.sort((a,b)=>sc(b)-sc(a))[0];}}
+        this.act(n,pickId);},1100);}
+  }
+  act(n,id){if(this.state.actions.length===n){this.state.actions.push(id);this.emit();}}
+  choose(i,side,s){
+    const ch=this.state.choices;ch[i]=ch[i]||{};if(!ch[i][side])ch[i][side]=s;
+    const bs=other(this.side);if(!ch[i][bs]){const o=i<3?["farm","dive","invade"]:["push","fight","split"];ch[i][bs]=o[Math.floor(Math.random()*3)];}
+  }
+  leave(){clearTimeout(this.timer);this.cb=null;}
+}
+class NetRoom{
+  constructor(id,side){this.net=true;this.id=id;this.side=side;this.ref=FB.db.ref("rooms/"+id);this.state={actions:[],choices:{},left:{}};
+    this.ref.child("left/"+side).onDisconnect().set(true);}
+  listen(cb){this.cb=cb;this.h=this.ref.on("value",s=>{const v=s.val();if(!v)return;
+    this.state={seed:v.seed,blue:v.blue,red:v.red,actions:toArr(v.actions),choices:v.choices||{},left:v.left||{}};
+    for(const s2 of["blue","red"])if(this.state[s2]){this.state[s2].col=this.state[s2].col||{};this.state[s2].skins=this.state[s2].skins||{};}
+    if(this.cb)this.cb();});}
+  act(n,id){this.ref.child("actions/"+n).transaction(c=>c===null?id:undefined);}
+  choose(i,side,s){this.ref.child("choices/"+i+"/"+side).transaction(c=>c===null?s:undefined);}
+  leave(){this.cb=null;this.ref.off("value",this.h);this.ref.child("left/"+this.side).set(true);this.ref.child("left/"+this.side).onDisconnect().cancel();}
+}
+
+/* ============================================================
+   6. DÉROULEMENT D'UN MATCH : file d'attente, draft, partie
+   ============================================================ */
+let M=null;
+function cleanupMatch(){
+  if(!M)return;
+  clearInterval(M.iv);cancelAnimationFrame(M.raf);
+  if(M.room)M.room.leave();
+  if(M.queueMine&&FB.db){FB.db.ref("queue").transaction(c=>c&&c.uid===FB.uid?null:undefined);if(M.waitRoom)FB.db.ref("rooms/"+M.waitRoom).remove();}
+  M=null;
+}
+function startLocal(){M={phase:"draft",room:new LocalRoom()};M.room.listen(onRoom);}
+async function startOnline(){
+  $("#app").innerHTML=`<div class="center panel"><h2>Recherche d'un adversaire…</h2><p class="mut">Garde cette page ouverte. Un ami peut cliquer « Jouer en ligne » en même temps.</p><button class="sec" id="cq">Annuler</button></div>`;
+  $("#cq").onclick=showMenu;
+  M={phase:"queue"};const mine=M;
+  try{
+    const db=FB.db,uid=FB.uid,me={uid,pseudo:ME.pseudo,col:ME.col,skins:ME.skins};
+    const newId=db.ref("rooms").push().key;let taken=null;
+    await db.ref("rooms/"+newId).set({seed:Math.floor(Math.random()*2**31),t:Date.now(),blue:me});
+    await db.ref("queue").transaction(cur=>{taken=null;if(cur&&cur.uid!==uid&&Date.now()-cur.t<120000){taken=cur;return null;}return{uid,room:newId,t:Date.now()};});
+    if(M!==mine){db.ref("rooms/"+newId).remove();if(!taken)db.ref("queue").transaction(c=>c&&c.uid===uid?null:undefined);return;}
+    if(taken){
+      db.ref("rooms/"+newId).remove();
+      await db.ref("rooms/"+taken.room+"/red").set(me);
+      M.room=new NetRoom(taken.room,"red");
+    }else{
+      M.queueMine=true;M.waitRoom=newId;db.ref("queue").onDisconnect().remove();
+      M.room=new NetRoom(newId,"blue");
+    }
+    M.room.listen(onRoom);
+  }catch(e){toast("Erreur réseau : "+(e.message||e));showMenu();}
+}
+function onRoom(){
+  if(!M||!M.room)return;const st=M.room.state,side=M.room.side;
+  if(M.phase==="queue"){
+    if(!st.blue||!st.red)return;
+    if(M.queueMine){M.queueMine=false;M.waitRoom=null;FB.db.ref("queue").onDisconnect().cancel();}
+    M.phase="draft";
+  }
+  if(st.left[other(side)]&&M.phase!=="end"){
+    if(M.phase==="game"){endGame(side,true);}
+    else{toast("Ton adversaire a quitté la draft.");showMenu();}
+    return;
+  }
+  if(M.phase==="draft")renderDraft();
+}
+function renderDraft(){
+  const room=M.room,st=room.state,side=room.side,n=st.actions.length,d=draftView(st);
+  if(M.draftN!==n){M.draftN=n;M.deadline=Date.now()+DRAFT_TURN_S*1000;M.sel=null;}
+  if(n>=SEQ.length){
+    if(!M.locked){M.locked=true;clearInterval(M.iv);setTimeout(()=>{if(M&&M.phase==="draft")startGame();},2500);}
+  }else if(!M.iv){
+    M.iv=setInterval(()=>{
+      if(!M||M.phase!=="draft")return;const s=M.room.state,k=s.actions.length;if(k>=SEQ.length)return;
+      const left=(M.deadline-Date.now())/1000,el=$("#dt");if(el)el.textContent=Math.max(0,Math.ceil(left));
+      const mine=SEQ[k][1]===M.room.side;
+      if((mine&&left<=0)||(M.room.net&&!mine&&left<=-6)){const v=validFor(s,k);M.room.act(k,v.length?v[Math.floor(Math.random()*v.length)]:"-");}
+    },250);
+  }
+  const done=n>=SEQ.length,[type,turn]=done?["",""]:SEQ[n],mine=turn===side;
+  const slot=(s,t,i)=>{const arr=d[t==="ban"?"bans":"picks"][s],id=arr[i];
+    const cur=!done&&turn===s&&type===t&&arr.length===i;
+    return `<div class="slot ${t==="ban"?"ban":""} ${cur?"cur":""}" title="${id&&DATA.champs[id]?esc(DATA.champs[id].name):""}">${id&&id!=="-"?`<img src="${icon(id,t==="pick"?(st[s].skins||{})[id]:0)}" alt="">`:""}</div>`;};
+  const sideHTML=s=>`<div class="side ${s}"><b class="${s==="blue"?"tb":"tr"}">${esc(st[s].pseudo)}${s===side?" (toi)":""}</b>
+    <div class="slots">${[0,1,2,3,4].map(i=>slot(s,"pick",i)).join("")}</div><div class="slots">${[0,1,2,3,4].map(i=>slot(s,"ban",i)).join("")}</div></div>`;
+  const valid=done?[]:validFor(st,n);
+  const showSide=!done&&mine&&type==="ban"?other(side):side;
+  const pool=Object.keys(st[showSide].col).filter(id=>DATA.champs[id]).sort((a,b)=>ROLES.indexOf(DATA.champs[a].role)-ROLES.indexOf(DATA.champs[b].role)||DATA.champs[a].name.localeCompare(DATA.champs[b].name,"fr"));
+  const extra=mine&&type==="pick"&&!pool.some(id=>valid.includes(id))?valid.slice(0,20):[];
+  const msg=done?"Draft terminée — lancement de la partie…":mine?(type==="ban"?"À toi de BANNIR un champion adverse":"À toi de CHOISIR un champion"):"L'adversaire "+(type==="ban"?"bannit":"choisit")+"…";
+  $("#app").innerHTML=`<div class="draftbar">${sideHTML("blue")}<div><div class="timer" id="dt">${done?"":DRAFT_TURN_S}</div></div>${sideHTML("red")}</div>
+   <div class="panel"><div class="row sp"><h3>${msg}</h3><div class="row"><button id="dv" ${mine&&M.sel?"":"disabled"}>Valider</button><button class="sec" id="dq">Quitter</button></div></div>
+   <p class="mut small">${mine&&type==="ban"?"Collection de ton adversaire":"Ta collection"} · chiffres = carry à 0 / 20 / 45 min · un champion hors de son rôle perd 10 %.</p>
+   <div class="grid" id="dg">${pool.concat(extra).map(id=>tileHTML(id,{count:st[showSide].col[id],skin:(st[showSide].skins||{})[id],cls:(mine&&valid.includes(id)?"":"dis")+(M.sel===id?" sel":"")})).join("")}</div></div>`;
+  $("#dq").onclick=showMenu;
+  $("#dv").onclick=()=>{if(M.sel)room.act(n,M.sel);};
+  $("#dg").onclick=e=>{const t=e.target.closest(".tile");if(!t||!mine)return;M.sel=t.dataset.id;document.querySelectorAll("#dg .tile").forEach(x=>x.classList.toggle("sel",x===t));$("#dv").disabled=false;};
+}
+
+/* ---------- Phase 2 : la partie ---------- */
+const STRATS={farm:["Farm safe","bat Dive"],dive:["Dive","bat Invade"],invade:["Invade","bat Farm safe"],
+  push:["Push together","Détruit des tours · bat Teamfight"],fight:["Teamfight","Dragon / Nashor · bat Split push"],split:["Split push","Détruit des tours · bat Push together"]};
+const IMG={};
+function img(src){if(!src)return null;if(!IMG[src]){const i=new Image();i.src=src;IMG[src]=i;}return IMG[src];}
+function startGame(){
+  clearInterval(M.iv);M.iv=null;
+  const room=M.room,st=room.state,d=draftView(st);
+  M.phase="game";
+  M.sim=createSim(st.seed,{blue:buildTeam(st.blue,d.picks.blue),red:buildTeam(st.red,d.picks.red)});
+  M.sim.champs.forEach(c=>{c.rx=c.x;c.ry=c.y;});
+  M.asking=null;M.acc=0;M.lastT=performance.now();M.evShown=0;
+  $("#app").innerHTML=`<div class="hud"><span class="tb">${esc(st.blue.pseudo)} <span id="hb"></span></span><span class="clock" id="clock">00:00</span><span class="tr"><span id="hr"></span> ${esc(st.red.pseudo)}</span></div>
+  <div class="game"><div class="mapwrap"><canvas id="map" width="1000" height="1000"></canvas><div id="ov"></div></div>
+  <div><div class="panel" id="sb"></div><div class="panel feed" id="feed"></div><div style="margin-top:8px"><button class="sec" id="gq">Abandonner</button></div></div></div>`;
+  $("#gq").onclick=()=>{if(confirm("Abandonner la partie ?"))showMenu();};
+  M.iv=setInterval(gameTick,100);
+  const loop=()=>{if(!M||!M.sim)return;draw();M.raf=requestAnimationFrame(loop);};loop();
+  gameTick();
+}
+function gameTick(){
+  if(!M||M.phase!=="game")return;
+  const sim=M.sim,room=M.room,side=room.side,now=performance.now();
+  let steps=Math.min(50,Math.floor((M.acc+now-M.lastT)/100));M.acc=(M.acc+now-M.lastT)-steps*100;M.lastT=now;
+  if(steps<1&&sim.pending()===null){hud();return;}
+  steps=Math.max(steps,1);
+  for(let s=0;s<steps;s++){
+    if(sim.over)break;
+    const p=sim.pending();
+    if(p!==null){
+      M.acc=0;
+      if(M.asking!==p){M.asking=p;M.choiceEnd=Date.now()+CHOICE_S*1000;M.myChoice=null;showChoice(p);}
+      const ch=room.state.choices[p]||{},left=(M.choiceEnd-Date.now())/1000,opts=p<3?["farm","dive","invade"]:["push","fight","split"];
+      const el=$("#ct");if(el)el.textContent=Math.max(0,Math.ceil(left));
+      if(left<=0&&!ch[side])room.choose(p,side,M.myChoice||opts[Math.floor(Math.random()*3)]);
+      if(room.net&&left<=-6&&!ch[other(side)])room.choose(p,other(side),opts[0]);
+      const c2=room.state.choices[p]||{};
+      if(c2.blue&&c2.red){const r=sim.resolve(p,c2.blue,c2.red);M.asking=null;showBanner(r);M.lastT=performance.now();}
+      break;
+    }
+    sim.step();
+  }
+  hud();
+  if(sim.over)endGame(sim.over,false);
+}
+function showChoice(p){
+  const opts=p<3?["farm","dive","invade"]:["push","fight","split"],side=M.room.side;
+  $("#ov").innerHTML=`<div class="choice"><div class="row sp" style="margin-bottom:8px"><b>Minute ${TIMINGS[p]} — choisis ta stratégie${p>=6?" (effets ×2)":""}</b><b id="ct">${CHOICE_S}</b></div>
+   <div class="opts">${opts.map(o=>`<button data-o="${o}">${STRATS[o][0]}<small>${STRATS[o][1]}</small></button>`).join("")}</div></div>`;
+  $("#ov").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    if(M.myChoice)return;M.myChoice=b.dataset.o;b.classList.add("pick");
+    $("#ov").querySelectorAll("button").forEach(x=>{if(x!==b)x.disabled=true;});
+    M.room.choose(p,side,M.myChoice);});
+}
+function showBanner(r){
+  const side=M.room.side,me=r[side],op=r[other(side)];
+  const res=r.winner===null?"Égalité":r.winner===side?"Fight gagné !":"Fight perdu";
+  $("#ov").innerHTML=`<div class="banner"><div class="mut small">Toi : ${STRATS[me][0]} — Adversaire : ${STRATS[op][0]}${r.tie&&r.winner?" (même choix : départagé au score de carry)":""}</div>
+    <div style="font-size:22px;color:${r.winner===side?"var(--acc)":r.winner?"var(--red)":"var(--gold)"}">${res}</div><div class="small">${esc(r.text)}</div></div>`;
+  const tag=r;setTimeout(()=>{if(M&&M.sim&&M.sim.last===tag&&M.asking===null&&$("#ov"))$("#ov").innerHTML="";},3200);
+}
+function hud(){
+  const sim=M.sim,min=sim.minute(),mm=Math.floor(min),ss=Math.floor((min-mm)*60);
+  $("#clock").textContent=String(mm).padStart(2,"0")+":"+String(ss).padStart(2,"0");
+  const h=t=>`🗼 ${sim.down[t]} · 🐉 ${sim.drakes[t]} · 👑 ${sim.barons[t]}`;
+  $("#hb").textContent=h("blue");$("#hr").textContent=h("red");
+  const rows=t=>sim.champs.filter(c=>c.team===t).sort((a,b)=>ROLES.indexOf(a.role)-ROLES.indexOf(b.role)).map(c=>
+    `<tr class="${c.dead?"dead":""}"><td><img src="${icon(c.id,c.skin)}" alt="" onerror="this.style.display='none'">${esc(c.name)}</td><td>${ROLE_LBL[c.role]}${c.off?"*":""}</td><td class="cv ${t==="blue"?"tb":"tr"}">${sim.carry(c).toFixed(1)}</td><td>${c.k}/${c.d}</td></tr>`).join("");
+  $("#sb").innerHTML=`<table><tr><th>Champion</th><th>Rôle</th><th>Carry</th><th>K/D</th></tr>
+    <tr><th colspan="2" class="tb">Équipe bleue</th><th class="cv tb">${sim.teamCarry("blue").toFixed(1)}</th><th></th></tr>${rows("blue")}
+    <tr><th colspan="2" class="tr">Équipe rouge</th><th class="cv tr">${sim.teamCarry("red").toFixed(1)}</th><th></th></tr>${rows("red")}</table><div class="mut small">* hors rôle (−10 %)</div>`;
+  if(sim.events.length!==M.evShown){M.evShown=sim.events.length;
+    $("#feed").innerHTML=sim.events.slice(-7).reverse().map(e=>`<div class="${e.team==="blue"?"tb":e.team==="red"?"tr":""}">[${Math.floor(e.tick/TPM)}'] ${esc(e.text)}</div>`).join("");}
+}
+function draw(){
+  const cv=$("#map");if(!cv)return;const g=cv.getContext("2d"),sim=M.sim;
+  g.fillStyle="#0d1a16";g.fillRect(0,0,1000,1000);
+  g.fillStyle="#102a1f";for(const p of[...CAMPS.blue,...CAMPS.red]){g.beginPath();g.arc(p[0],p[1],70,0,7);g.fill();}
+  g.lineCap=g.lineJoin="round";
+  g.strokeStyle="#14384f";g.lineWidth=64;g.beginPath();g.moveTo(190,190);g.lineTo(810,810);g.stroke();
+  g.strokeStyle="#3a3324";g.lineWidth=48;
+  for(const l of LN){g.beginPath();LANES[l].forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.stroke();}
+  for(const t of["blue","red"]){g.fillStyle=t==="blue"?"#4aa3ff22":"#ff5a6a22";g.beginPath();g.arc(BASES[t][0],BASES[t][1],120,0,7);g.fill();}
+  g.font="bold 15px system-ui";g.textAlign="center";
+  for(const[k,p]of Object.entries(PITS)){g.fillStyle="#0a2233";g.beginPath();g.arc(p[0],p[1],44,0,7);g.fill();g.fillStyle="#8b96b3";g.fillText(k==="dragon"?"Dragon":"Nashor",p[0],p[1]+5);}
+  for(const w of sim.towers){
+    g.fillStyle=w.alive?(w.team==="blue"?"#4aa3ff":"#ff5a6a"):"#2a2f3a";
+    g.fillRect(w.x-13,w.y-13,26,26);
+    if(w.alive&&w.hp<100){g.fillStyle="#000";g.fillRect(w.x-16,w.y-24,32,5);g.fillStyle="#f2b84b";g.fillRect(w.x-16,w.y-24,32*w.hp/100,5);}
+  }
+  for(const t of["blue","red"]){const b=BASES[t];
+    g.save();g.translate(b[0],b[1]);g.rotate(Math.PI/4);g.fillStyle=t==="blue"?"#4aa3ff":"#ff5a6a";g.fillRect(-24,-24,48,48);g.restore();
+    g.fillStyle="#000";g.fillRect(b[0]-36,b[1]-52,72,7);g.fillStyle="#19d3c5";g.fillRect(b[0]-36,b[1]-52,72*sim.nexus[t]/100,7);}
+  if(sim.fight&&sim.tick<sim.fight.until&&sim.fight.pos){g.strokeStyle="#f2b84b";g.lineWidth=4;g.beginPath();g.arc(sim.fight.pos[0],sim.fight.pos[1],60+Math.sin(performance.now()/120)*10,0,7);g.stroke();}
+  for(const c of sim.champs){
+    if(c.dead){c.rx=BASES[c.team][0];c.ry=BASES[c.team][1];continue;}
+    c.rx+=(c.x-c.rx)*0.15;c.ry+=(c.y-c.ry)*0.15;
+    const R=24,im=img(icon(c.id,c.skin));
+    g.save();g.beginPath();g.arc(c.rx,c.ry,R,0,7);g.closePath();g.fillStyle="#1a2238";g.fill();g.clip();
+    if(im&&im.complete&&im.naturalWidth)g.drawImage(im,c.rx-R,c.ry-R,R*2,R*2);
+    else{g.fillStyle="#e8ecf6";g.font="bold 16px system-ui";g.fillText(c.name.slice(0,3),c.rx,c.ry+6);}
+    g.restore();
+    g.strokeStyle=c.team==="blue"?"#4aa3ff":"#ff5a6a";g.lineWidth=4;g.beginPath();g.arc(c.rx,c.ry,R,0,7);g.stroke();
+  }
+}
+function endGame(winner,forfeit){
+  if(!M||M.phase==="end")return;
+  M.phase="end";clearInterval(M.iv);
+  const win=winner===M.room.side;
+  ME.chests++;if(win)ME.wins++;else ME.losses++;
+  save().catch(e=>toast("Sauvegarde impossible : "+e.message));
+  const sim=M.sim,best=sim.champs.slice().sort((a,b)=>sim.carry(b)-sim.carry(a))[0];
+  const m=document.createElement("div");m.className="modal";
+  m.innerHTML=`<div class="panel" style="text-align:center;max-width:440px"><div class="logo" style="font-size:40px">${win?"VICTOIRE":"DÉFAITE"}</div>
+   <p>${forfeit?"Ton adversaire a quitté la partie.":"Nexus détruit à la minute "+Math.floor(sim.minute())+"."}</p>
+   <p class="mut">Meilleur carry : ${esc(best.name)} (${sim.carry(best).toFixed(1)})</p>
+   <p><span class="tag new">+1 coffre Hextech</span></p><button id="eb">Retour au menu</button></div>`;
+  document.body.appendChild(m);m.querySelector("#eb").onclick=()=>{m.remove();showMenu();};
+}
+
+/* ---------- Démarrage ---------- */
+if(typeof document!=="undefined"){
+  $("#app").innerHTML='<div class="center panel"><div class="logo">DraftMaster</div><p class="mut">Chargement des champions…</p></div>';
+  loadData().then(()=>showLogin());
+}
+</script>
+</body>
+</html>
